@@ -1,0 +1,32 @@
+server {
+    listen 443 ssl;
+    server_name {{ MINIO_NGINX_API_HOSTNAME }};
+
+    ssl_certificate /etc/ssl/certs/minio_{{ MINIO_NGINX_API_HOSTNAME }}_pubkey.pem;
+    ssl_certificate_key /etc/ssl/private/minio_{{ MINIO_NGINX_API_HOSTNAME }}_privkey.pem;
+
+    access_log /var/log/nginx/{{ MINIO_NGINX_API_HOSTNAME }}.access.log;
+    error_log /var/log/nginx/{{ MINIO_NGINX_API_HOSTNAME }}.error.log;
+    
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    }   
+
+    if ($host = {{ MINIO_NGINX_API_HOSTNAME }}) {
+        return 301 https://$host:9000$request_uri;
+    }   
+    return 404;
+}
+
+server {
+    listen 80; 
+    server_name {{ MINIO_NGINX_API_HOSTNAME }};
+
+    access_log /var/log/nginx/http.{{ MINIO_NGINX_API_HOSTNAME }}.access.log;
+    error_log /var/log/nginx/http.{{ MINIO_NGINX_API_HOSTNAME }}.error.log;
+
+    if ($host = {{ MINIO_NGINX_API_HOSTNAME }}) {
+        return 301 https://$host:9000$request_uri;
+    }
+    return 404;
+}

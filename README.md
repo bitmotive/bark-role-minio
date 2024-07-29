@@ -34,6 +34,11 @@ Dependencies
 Currently dependent on Debian/Ubuntu due to reliance on `apt` and filepath 
 assumptions. 
 
+Also assumes the following:
+
+- SSL certificates required to encrypt all traffic
+- NGINX will proxy web requests to MinIO
+
 License
 -------
 

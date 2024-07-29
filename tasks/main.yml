@@ -1,2 +1,462 @@
 ---
-# tasks file for bark-role-minio
+# ROLE: MinIO
+#
+# DESCRIPTION:
+# This playbook provides a default MinIO install & config
+
+
+###############################################################################
+################### VARIABLE INITIALIZATION & TASK SETUP ######################
+###############################################################################
+
+# MINIO_PORT
+- name: Set MINIO_PORT set fact from env if possible
+  set_fact:
+    MINIO_PORT: "{{ lookup('env', 'MINIO_PORT') | default('') | trim }}"
+  when: lookup('env', 'MINIO_PORT') | default('', true) | trim != ''
+- name: MINIO_PORT prompt user input if unset
+  pause:
+    prompt: "SET MINIO_PORT"
+    echo: yes
+  register: input
+  when: MINIO_PORT is not defined or MINIO_PORT == ''
+- name: MINIO_PORT set fact from user input
+  set_fact:
+    MINIO_PORT: "{{ input.user_input | default('9000') | trim }}"
+  when: MINIO_PORT is not defined or MINIO_PORT == ''
+
+# MINIO_CONSOLE_PORT
+- name: Set MINIO_CONSOLE_PORT set fact from env if possible
+  set_fact:
+    MINIO_CONSOLE_PORT: "{{ lookup('env', 'MINIO_CONSOLE_PORT') | default('') | trim }}"
+  when: lookup('env', 'MINIO_CONSOLE_PORT') | default('', true) | trim != ''
+- name: MINIO_CONSOLE_PORT prompt user input if unset
+  pause:
+    prompt: "SET MINIO_CONSOLE_PORT"
+    echo: yes
+  register: input
+  when: MINIO_CONSOLE_PORT is not defined or MINIO_CONSOLE_PORT == ''
+- name: MINIO_CONSOLE_PORT set fact from user input
+  set_fact:
+    MINIO_CONSOLE_PORT: "{{ input.user_input | default('9001') | trim }}"
+  when: MINIO_CONSOLE_PORT is not defined or MINIO_CONSOLE_PORT == ''
+
+# MINIO_SSL_PUBKEY
+- name: Set MINIO_SSL_PUBKEY set fact from env if possible
+  set_fact:
+    MINIO_SSL_PUBKEY: "{{ lookup('env', 'MINIO_SSL_PUBKEY') | default('') | trim }}"
+  when: lookup('env', 'MINIO_SSL_PUBKEY') | default('', true) | trim != ''
+- name: MINIO_SSL_PUBKEY prompt user input if unset
+  pause:
+    prompt: "SET MINIO_SSL_PUBKEY (path to public key on local machine)"
+    echo: yes
+  register: input
+  when: MINIO_SSL_PUBKEY is not defined or MINIO_SSL_PUBKEY == ''
+- name: MINIO_SSL_PUBKEY set fact from user input
+  set_fact:
+    MINIO_SSL_PUBKEY: "{{ input.user_input | default('') | trim }}"
+  when: MINIO_SSL_PUBKEY is not defined or MINIO_SSL_PUBKEY == ''
+
+# MINIO_SSL_PRIVKEY
+- name: Set MINIO_SSL_PRIVKEY set fact from env if possible
+  set_fact:
+    MINIO_SSL_PRIVKEY: "{{ lookup('env', 'MINIO_SSL_PRIVKEY') | default('') | trim }}"
+  when: lookup('env', 'MINIO_SSL_PRIVKEY') | default('', true) | trim != ''
+- name: MINIO_SSL_PRIVKEY prompt user input if unset
+  pause:
+    prompt: "SET MINIO_SSL_PRIVKEY (path to private key on local machine)"
+    echo: yes
+  register: input
+  when: MINIO_SSL_PRIVKEY is not defined or MINIO_SSL_PRIVKEY == ''
+- name: MINIO_SSL_PRIVKEY set fact from user input
+  set_fact:
+    MINIO_SSL_PRIVKEY: "{{ input.user_input | default('') | trim }}"
+  when: MINIO_SSL_PRIVKEY is not defined or MINIO_SSL_PRIVKEY == ''
+
+# MINIO_SSL_CACERT
+- name: Set MINIO_SSL_CACERT set fact from env if possible
+  set_fact:
+    MINIO_SSL_CACERT: "{{ lookup('env', 'MINIO_SSL_CACERT') | default('') | trim }}"
+  when: lookup('env', 'MINIO_SSL_CACERT') | default('', true) | trim != ''
+- name: MINIO_SSL_CACERT prompt user input if unset
+  pause:
+    prompt: "SET MINIO_SSL_CACERT (path to root CA certificate on local machine)"
+    echo: yes
+  register: input
+  when: MINIO_SSL_CACERT is not defined or MINIO_SSL_CACERT == ''
+- name: MINIO_SSL_CACERT set fact from user input
+  set_fact:
+    MINIO_SSL_CACERT: "{{ input.user_input | default('') | trim }}"
+  when: MINIO_SSL_CACERT is not defined or MINIO_SSL_CACERT == ''
+
+# MINIO_ROOT_USER
+- name: Set MINIO_ROOT_USER set fact from env if possible
+  set_fact:
+    MINIO_ROOT_USER: "{{ lookup('env', 'MINIO_ROOT_USER') | default('') | trim }}"
+  when: lookup('env', 'MINIO_ROOT_USER') | default('', true) | trim != ''
+- name: MINIO_ROOT_USER prompt user input if unset
+  pause:
+    prompt: "SET MINIO_ROOT_USER"
+    echo: yes
+  register: input
+  when: MINIO_ROOT_USER is not defined or MINIO_ROOT_USER == ''
+- name: MINIO_ROOT_USER set fact from user input
+  set_fact:
+    MINIO_ROOT_USER: "{{ input.user_input | default('minioadmin') | trim }}"
+  when: MINIO_ROOT_USER is not defined or MINIO_ROOT_USER == ''
+
+# MINIO_ROOT_PASSWORD
+- name: Set MINIO_ROOT_PASSWORD set fact from env if possible
+  set_fact:
+    MINIO_ROOT_PASSWORD: "{{ lookup('env', 'MINIO_ROOT_PASSWORD') | default('') | trim }}"
+  when: lookup('env', 'MINIO_ROOT_PASSWORD') | default('', true) | trim != ''
+- name: MINIO_ROOT_PASSWORD prompt user input if unset
+  pause:
+    prompt: "SET MINIO_ROOT_PASSWORD"
+    echo: yes
+  register: input
+  when: MINIO_ROOT_PASSWORD is not defined or MINIO_ROOT_PASSWORD == ''
+- name: MINIO_ROOT_PASSWORD set fact from user input
+  set_fact:
+    MINIO_ROOT_PASSWORD: "{{ input.user_input | default('minioadmin') | trim }}"
+  when: MINIO_ROOT_PASSWORD is not defined or MINIO_ROOT_PASSWORD == ''
+
+# MINIO_VOLUMES
+- name: Set MINIO_VOLUMES set fact from env if possible
+  set_fact:
+    MINIO_VOLUMES: "{{ lookup('env', 'MINIO_VOLUMES') | default('') | trim }}"
+  when: lookup('env', 'MINIO_VOLUMES') | default('', true) | trim != ''
+- name: MINIO_VOLUMES prompt user input if unset
+  pause:
+    prompt: "SET MINIO_VOLUMES"
+    echo: yes
+  register: input
+  when: MINIO_VOLUMES is not defined or MINIO_VOLUMES == ''
+- name: MINIO_VOLUMES set fact from user input
+  set_fact:
+    MINIO_VOLUMES: "{{ input.user_input | default('/mnt/minio') | trim }}"
+  when: MINIO_VOLUMES is not defined or MINIO_VOLUMES == ''
+
+# MINIO_OPTS
+- name: Set MINIO_OPTS set fact from env if possible
+  set_fact:
+    MINIO_OPTS: "{{ lookup('env', 'MINIO_OPTS') | default('') | trim }}"
+  when: lookup('env', 'MINIO_OPTS') | default('', true) | trim != ''
+- name: MINIO_OPTS prompt user input if unset
+  pause:
+    prompt: "SET MINIO_OPTS"
+    echo: yes
+  register: input
+  when: MINIO_OPTS is not defined or MINIO_OPTS == ''
+- name: MINIO_OPTS set fact from user input
+  set_fact:
+    MINIO_OPTS: "{{ input.user_input | default('--console-address :{{ MINIO_CONSOLE_PORT }} --address :{{ MINIO_PORT }}') | trim }}"
+  when: MINIO_OPTS is not defined or MINIO_OPTS == ''
+
+# MINIO_SERVER_URL
+- name: Set MINIO_SERVER_URL set fact from env if possible
+  set_fact:
+    MINIO_SERVER_URL: "{{ lookup('env', 'MINIO_SERVER_URL') | default('') | trim }}"
+  when: lookup('env', 'MINIO_SERVER_URL') | default('', true) | trim != ''
+- name: MINIO_SERVER_URL prompt user input if unset
+  pause:
+    prompt: "SET MINIO_SERVER_URL"
+    echo: yes
+  register: input
+  when: MINIO_SERVER_URL is not defined or MINIO_SERVER_URL == ''
+- name: MINIO_SERVER_URL set fact from user input
+  set_fact:
+    MINIO_SERVER_URL: "{{ input.user_input | default('https://{{ ansible_fqdn }}:{{ MINIO_PORT }}') | trim }}"
+  when: MINIO_SERVER_URL is not defined or MINIO_SERVER_URL == ''
+
+# MINIO_BROWSER_REDIRECT_URL
+- name: Set MINIO_BROWSER_REDIRECT_URL set fact from env if possible
+  set_fact:
+    MINIO_BROWSER_REDIRECT_URL: "{{ lookup('env', 'MINIO_BROWSER_REDIRECT_URL') | default('') | trim }}"
+  when: lookup('env', 'MINIO_BROWSER_REDIRECT_URL') | default('', true) | trim != ''
+- name: MINIO_BROWSER_REDIRECT_URL prompt user input if unset
+  pause:
+    prompt: "SET MINIO_BROWSER_REDIRECT_URL"
+    echo: yes
+  register: input
+  when: MINIO_BROWSER_REDIRECT_URL is not defined or MINIO_BROWSER_REDIRECT_URL == ''
+- name: MINIO_BROWSER_REDIRECT_URL set fact from user input
+  set_fact:
+    MINIO_BROWSER_REDIRECT_URL: "{{ input.user_input | default('https://{{ ansible_fqdn }}:{{ MINIO_CONSOLE_PORT }}') | trim }}"
+  when: MINIO_BROWSER_REDIRECT_URL is not defined or MINIO_BROWSER_REDIRECT_URL == ''
+
+# MINIO_NGINX_OPEN_PORTS
+# A list of ports that should be supported for NGINX
+- name: Set MINIO_NGINX_OPEN_PORTS set fact from env if possible
+  set_fact:
+    MINIO_NGINX_OPEN_PORTS: "{{ lookup('env', 'MINIO_NGINX_OPEN_PORTS') | default('') | trim | split(',') }}"
+  when: lookup('env', 'MINIO_NGINX_OPEN_PORTS') | default('', true) | trim != ''
+- name: MINIO_NGINX_OPEN_PORTS prompt user input if unset
+  pause:
+    prompt: "SET MINIO_NGINX_OPEN_PORTS"
+    echo: yes
+  register: input
+  when: MINIO_NGINX_OPEN_PORTS is not defined or MINIO_NGINX_OPEN_PORTS == ''
+- name: MINIO_NGINX_OPEN_PORTS set fact from user input
+  set_fact:
+    MINIO_NGINX_OPEN_PORTS: "{{ input.user_input | default('') | trim | split(',') }}"
+  when: MINIO_NGINX_OPEN_PORTS is not defined or MINIO_NGINX_OPEN_PORTS == ''
+- name: Ensure MINIO_NGINX_OPEN_PORTS is a list
+  set_fact:
+    MINIO_NGINX_OPEN_PORTS: "{{ MINIO_NGINX_OPEN_PORTS | default('') | trim | split(',') }}"
+
+# MINIO_NGINX_WEB_HOSTNAME
+- name: Set MINIO_NGINX_WEB_HOSTNAME set fact from env if possible
+  set_fact:
+    MINIO_NGINX_WEB_HOSTNAME: "{{ lookup('env', 'MINIO_NGINX_WEB_HOSTNAME') | default('') | trim }}"
+  when: lookup('env', 'MINIO_NGINX_WEB_HOSTNAME') | default('', true) | trim != ''
+- name: MINIO_NGINX_WEB_HOSTNAME prompt user input if unset
+  pause:
+    prompt: "SET MINIO_NGINX_WEB_HOSTNAME"
+    echo: yes
+  register: input
+  when: MINIO_NGINX_WEB_HOSTNAME is not defined or MINIO_NGINX_WEB_HOSTNAME == ''
+- name: MINIO_NGINX_WEB_HOSTNAME set fact from user input
+  set_fact:
+    MINIO_NGINX_WEB_HOSTNAME: "{{ input.user_input | default('minio-web.example.com') | trim }}"
+  when: MINIO_NGINX_WEB_HOSTNAME is not defined or MINIO_NGINX_WEB_HOSTNAME == ''
+
+# MINIO_NGINX_API_HOSTNAME
+- name: Set MINIO_NGINX_API_HOSTNAME set fact from env if possible
+  set_fact:
+    MINIO_NGINX_API_HOSTNAME: "{{ lookup('env', 'MINIO_NGINX_API_HOSTNAME') | default('') | trim }}"
+  when: lookup('env', 'MINIO_NGINX_API_HOSTNAME') | default('', true) | trim != ''
+- name: MINIO_NGINX_API_HOSTNAME prompt user input if unset
+  pause:
+    prompt: "SET MINIO_NGINX_API_HOSTNAME"
+    echo: yes
+  register: input
+  when: MINIO_NGINX_API_HOSTNAME is not defined or MINIO_NGINX_API_HOSTNAME == ''
+- name: MINIO_NGINX_API_HOSTNAME set fact from user input
+  set_fact:
+    MINIO_NGINX_API_HOSTNAME: "{{ input.user_input | default('minio-api.example.com') | trim }}"
+  when: MINIO_NGINX_API_HOSTNAME is not defined or MINIO_NGINX_API_HOSTNAME == ''
+
+###############################################################################
+############################ ROLE IMPLEMENTATION ##############################
+###############################################################################
+
+
+# Step 1: Install MinIO
+
+- name: Download MinIO binary
+  get_url:
+    url: https://dl.min.io/server/minio/release/linux-amd64/minio
+    dest: /usr/local/bin/minio
+    mode: '0755'
+  become: yes
+
+- name: Create MinIO user
+  user:
+    name: minio-user
+    system: yes
+    create_home: yes
+    home: /home/minio-user
+  become: yes
+
+- name: Create MinIO data directory
+  file:
+    path: /mnt/minio
+    state: directory
+    owner: minio-user
+    group: minio-user
+    mode: '0755'
+  become: yes
+
+- name: Create MinIO certs directory
+  file:
+    path: /home/minio-user/.minio/certs
+    state: directory
+    owner: minio-user
+    group: minio-user
+    mode: '0700'
+  become: yes
+- name: Ensure CAs directory exists
+  file:
+    path: /home/minio-user/.minio/certs/CAs
+    state: directory
+    owner: minio-user
+    group: minio-user
+    mode: '0755'
+  become: yes
+
+# Step 2: Copy SSL certificates
+
+- name: Copy SSL public key
+  copy:
+    src: "{{ MINIO_SSL_PUBKEY }}"
+    dest: /home/minio-user/.minio/certs/public.crt
+    owner: minio-user
+    group: minio-user
+    mode: '0644'
+  become: yes
+  when: MINIO_SSL_PUBKEY != ''
+
+- name: Copy SSL private key
+  copy:
+    src: "{{ MINIO_SSL_PRIVKEY }}"
+    dest: /home/minio-user/.minio/certs/private.key
+    owner: minio-user
+    group: minio-user
+    mode: '0600'
+  become: yes
+  when: MINIO_SSL_PRIVKEY != ''
+
+- name: Copy root CA certificate
+  copy:
+    src: "{{ MINIO_SSL_CACERT }}"
+    dest: /home/minio-user/.minio/certs/CAs/root.crt
+    owner: minio-user
+    group: minio-user
+    mode: '0644'
+  become: yes
+  when: MINIO_SSL_CACERT != ''
+
+# Step 3: Configure firewall rules
+
+- name: Set up basic ufw rules for MinIO
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+  with_items:
+    - "{{ MINIO_PORT }}"
+    - "{{ MINIO_CONSOLE_PORT }}"
+  become: yes 
+
+# Step 4: Configure MinIO
+
+- name: Create MinIO default configuration file
+  template:
+    src: minio.default.j2
+    dest: /etc/default/minio
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Create MinIO systemd service file
+  template:
+    src: minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Start and enable MinIO service
+  systemd:
+    name: minio
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+
+- name: restart minio
+  systemd:
+    name: minio
+    state: restarted
+  become: yes
+
+# Step 5: Configure NGINX to Proxy MinIO Requests
+
+- name: Install NGINX
+  apt:
+    name:
+      - nginx
+    state: present
+
+- name: Open NGINX Target Ports
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+  with_items: "{{ MINIO_NGINX_OPEN_PORTS }}"
+  become: yes
+
+- name: Copy SSL NGINX public WEB key
+  copy:
+    src: "{{ MINIO_SSL_PUBKEY }}"
+    dest: /etc/ssl/certs/minio_{{ MINIO_NGINX_WEB_HOSTNAME }}_pubkey.pem
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: MINIO_SSL_PUBKEY != ''
+
+- name: Copy SSL NGINX public API key
+  copy:
+    src: "{{ MINIO_SSL_PUBKEY }}"
+    dest: /etc/ssl/certs/minio_{{ MINIO_NGINX_API_HOSTNAME }}_pubkey.pem
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: MINIO_SSL_PUBKEY != ''
+
+- name: Copy SSL NGINX private WEB key
+  copy:
+    src: "{{ MINIO_SSL_PRIVKEY }}"
+    dest: /etc/ssl/private/minio_{{ MINIO_NGINX_WEB_HOSTNAME }}_privkey.pem
+    owner: minio-user
+    group: minio-user
+    mode: '0600'
+  become: yes
+  when: MINIO_SSL_PRIVKEY != ''
+
+- name: Copy SSL NGINX private API key
+  copy:
+    src: "{{ MINIO_SSL_PRIVKEY }}"
+    dest: /etc/ssl/private/minio_{{ MINIO_NGINX_API_HOSTNAME }}_privkey.pem
+    owner: minio-user
+    group: minio-user
+    mode: '0600'
+  become: yes
+  when: MINIO_SSL_PRIVKEY != ''
+
+- name: Create MinIO Web Hostname NGINX Proxy 
+  template:
+    src: nginx.minioweb.conf.j2
+    dest: /etc/nginx/sites-available/{{ MINIO_NGINX_WEB_HOSTNAME }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Enable MinIO Web Hostname NGINX Proxy
+  file:
+    src: /etc/nginx/sites-available/{{ MINIO_NGINX_WEB_HOSTNAME }}.conf
+    dest: /etc/nginx/sites-enabled/{{ MINIO_NGINX_WEB_HOSTNAME }}.conf
+    state: link
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Create MinIO API Hostname NGINX Proxy 
+  template:
+    src: nginx.minioapi.conf.j2
+    dest: /etc/nginx/sites-available/{{ MINIO_NGINX_API_HOSTNAME }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Enable NGINX Web Hostname Proxy
+  file:
+    src: /etc/nginx/sites-available/{{ MINIO_NGINX_API_HOSTNAME }}.conf
+    dest: /etc/nginx/sites-enabled/{{ MINIO_NGINX_API_HOSTNAME }}.conf
+    state: link
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+  become: yes
